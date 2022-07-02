@@ -6,21 +6,23 @@ import (
 	"regexp"
 )
 
+// Router is a http.Handler capable of routing requests.
 type Router struct {
-	routes     []Route
+	routes     []route
 	middleware []Middleware
 	handler    http.Handler
 }
 
-type Route struct {
+type route struct {
 	method  string
 	path    string
 	matcher *regexp.Regexp
 	handler http.Handler
 }
 
+// NewRouter returns a new router instance.
 func NewRouter() *Router {
-	r := &Router{routes: make([]Route, 0)}
+	r := &Router{routes: make([]route, 0)}
 	r.handler = r.newHandler()
 
 	return r
@@ -44,15 +46,18 @@ func (r *Router) Handle(method string, path string, handler any) {
 	default:
 		panic("Unknown handler type")
 	}
-	route := Route{method, path, regexp.MustCompile("^" + path + "$"), h}
-	r.routes = append(r.routes, route)
+	rt := route{method, path, regexp.MustCompile("^" + path + "$"), h}
+	r.routes = append(r.routes, rt)
 }
 
-// Use registers the supplied middleware
+// Use registers the supplied middleware. Middleware are run in the order they
+// are added.
 func (r *Router) Use(mw Middleware) {
 	r.middleware = append(r.middleware, mw)
 }
 
+// ServeHTTP calls all registered middleware, then routes the request to the
+// registered handler or returns 404 if a matching handler cannot be found.
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	next := r.handler
 
@@ -65,14 +70,14 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 func (r *Router) newHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		for _, route := range r.routes {
-			if route.method != req.Method || !route.matcher.MatchString(req.URL.Path) {
+		for _, rt := range r.routes {
+			if rt.method != req.Method || !rt.matcher.MatchString(req.URL.Path) {
 				continue
 			}
 			ctx := context.WithValue(
-				req.Context(), ParamsKey, buildPathParams(route, req),
+				req.Context(), ParamsKey, buildPathParams(rt, req),
 			)
-			route.handler.ServeHTTP(w, req.WithContext(ctx))
+			rt.handler.ServeHTTP(w, req.WithContext(ctx))
 			return
 		}
 		JSONError(w, http.StatusNotFound, "resource could not be found")
