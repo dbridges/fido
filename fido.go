@@ -20,9 +20,9 @@ type H map[string]any
 // JSON encodes a value and writes it to the supplied response writer after
 // setting the response status.
 func JSON(w http.ResponseWriter, status int, d any) {
-	err := json.NewEncoder(w).Encode(d)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
+	err := json.NewEncoder(w).Encode(d)
 	if err != nil {
 		JSONError(w, http.StatusInternalServerError, "Error writing JSON")
 	}
