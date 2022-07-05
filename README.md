@@ -1,6 +1,7 @@
 # fido
 
-`fido` is a minimalist collection of utility functions for making HTTP JSON APIs with Go.
+`fido` is a collection of utility functions for constructing HTTP based JSON
+APIs with Go. It is dependency free.
 
 `fido` includes:
 - A simple method based regexp router.
@@ -48,6 +49,6 @@ func main() {
 	r.Handle("GET", "/say/(?P<msg>[a-zA-Z]+)", handleSay)
 
 	log.Println("Listening on port 5000")
-	http.ListenAndServe("localhost:5000", r)
+	log.Fatal(http.ListenAndServe("localhost:5000", r))
 }
 ```

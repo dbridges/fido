@@ -31,7 +31,7 @@ func Logger(next http.Handler) http.Handler {
 		start := time.Now()
 		next.ServeHTTP(w, r)
 		end := time.Now()
-		log.Printf("%-5s %s in %s\n", r.Method, r.URL, end.Sub(start))
+		log.Printf("%-7s %s in %s\n", r.Method, r.URL, end.Sub(start))
 	})
 }
 

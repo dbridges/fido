@@ -2,8 +2,10 @@ package fido
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"regexp"
+	"strconv"
 )
 
 // Router is a http.Handler capable of routing requests.
@@ -82,4 +84,62 @@ func (r *Router) newHandler() http.HandlerFunc {
 		}
 		JSONError(w, http.StatusNotFound, "resource could not be found")
 	}
+}
+
+// Path parameter extraction
+
+type paramsKey struct{}
+
+// ParamsKey can be used to fetch the path params from the request's context.
+// Typically the Params function is used directly.
+var ParamsKey = paramsKey{}
+
+type pathParams struct {
+	params map[string]string
+}
+
+// PathParams defines an interface for accessing path parameters by string or
+// by int.
+type PathParams interface {
+	Get(string) string
+	GetInt(string) (int, error)
+}
+
+// Get returns the named path parameter as a string.
+func (p *pathParams) Get(key string) string {
+	if v, ok := p.params[key]; ok {
+		return v
+	}
+	return ""
+}
+
+// GetInt returns the named path parameter as an integer.
+func (p *pathParams) GetInt(key string) (int, error) {
+	v, ok := p.params[key]
+	if !ok {
+		return 0, fmt.Errorf("value not found")
+	}
+	i, err := strconv.Atoi(v)
+	if err != nil {
+		return 0, err
+	}
+	return i, nil
+}
+
+func buildPathParams(rt route, req *http.Request) PathParams {
+	params := make(map[string]string)
+	names := rt.matcher.SubexpNames()
+	for i, match := range rt.matcher.FindStringSubmatch(req.URL.Path) {
+		if names[i] != "" {
+			params[names[i]] = match
+		}
+	}
+
+	return &pathParams{params}
+}
+
+// Params extracts the path paremeters from the requests context and returns an
+// object which implements PathParams
+func Params(req *http.Request) PathParams {
+	return req.Context().Value(ParamsKey).(PathParams)
 }
